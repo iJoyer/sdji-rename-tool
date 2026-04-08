@@ -1,0 +1,24 @@
+{
+  "name": "pic-rename-tool",
+  "version": "0.2.2",
+  "description": "CLI to batch normalize image filenames by YAML rules.",
+  "license": "MIT",
+  "bin": {
+    "pic-rename": "bin/pic-rename.js"
+  },
+  "files": [
+    "bin",
+    "pic_rename_tool",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "cli",
+    "image",
+    "rename",
+    "dji"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

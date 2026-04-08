@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from pic_rename_tool.cli import main
 
 

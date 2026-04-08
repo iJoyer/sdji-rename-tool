@@ -1,0 +1,58 @@
+# 内置默认配置：安装后无需额外配置文件即可使用
+
+scope:
+  recursive: true
+  include_directories: false
+
+file_types:
+  image_extensions:
+    - jpg
+    - jpeg
+    - png
+    - webp
+    - avif
+    - heic
+    - heif
+    - tif
+    - tiff
+    - raw
+    - dng
+    - cr2
+    - cr3
+    - nef
+    - arw
+    - raf
+    - orf
+    - rw2
+
+dji_rules:
+  enabled: true
+  starts_with: "DJI"
+  remove_middle_timestamp: true
+  timestamp_must_follow_prefix: true
+  timestamp_patterns:
+    - "yyyyMMdd"
+    - "yyyyMMddHHmmss"
+  keep_markers:
+    - "-T"
+    - "-L"
+  remove_markers:
+    - "_D"
+    - "-D"
+    - "-HDR"
+    - "-EDIT"
+    - "-Enhanced"
+    - "-NR"
+    - "-SR"
+  remove_underscore_markers: true
+  remove_trailing_hyphen_chain_on_marker_hit: true
+  remove_existing_trailing_dash_number: true
+
+conflict_resolution:
+  strategy: "append_dash_index"
+  start_index: 2
+
+execution:
+  dry_run: false
+  create_rename_log: true
+  rename_log_file: "/tmp/pic-rename/rename_log.csv"

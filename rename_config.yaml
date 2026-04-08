@@ -81,6 +81,6 @@ execution:
   # true=仅预览，不实际改名
   dry_run: false
   # 是否输出改名日志
-  create_rename_log: no
-  # 改名日志文件名
-  rename_log_file: "rename_log.csv"
+  create_rename_log: yes
+  # 改名日志文件名（建议放 /tmp，方便 undo-last 在不同目录执行）
+  rename_log_file: "/tmp/pic-rename/rename_log.csv"
