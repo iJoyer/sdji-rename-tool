@@ -1,6 +1,6 @@
 # SDJI Rename Tool
 
-一个给 DJI 图片文件批量改名的 macOS 小工具，支持独立 App、命令行和 Adobe Lightroom Classic 导出后自动改名。
+一个给 DJI 图片文件批量改名的 macOS 小工具，支持独立 App、命令行和 Adobe Lightroom Classic 导出后自动改名。代码和文案全部由 CodeX 完成。
 
 做这个工具的初衷很简单：DJI 的文件名太太太长了，而且经常混着时间戳、`_D`、`-HDR`、`-T` 这类标记。Finder 里没有一个舒服的机械替换方式，Lightroom 导出后手动改也很烦，所以做了这么个工具。
 
