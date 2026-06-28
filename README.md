@@ -17,7 +17,7 @@
 ## 功能
 
 - 拖入图片文件夹
-- Lightroom Classic 导出后自动改名
+- Lightroom CC / Classic 导出后自动改名并打开导出文件夹
 - 命令行调用同一套 App 规则
 - 预览 `原文件名 -> 新文件名`
 - 自定义图片格式
@@ -33,17 +33,19 @@
 - 撤销上次改名
 - 保存规则配置
 
-## Lightroom Classic
+## Lightroom CC / Classic
 
-安装 Export Action 后，在 Lightroom Classic 导出窗口底部选择：
+安装 Export Action 后，在 Lightroom 导出窗口底部选择：
 
 ```text
 Post-Processing -> After Export -> SDJI Rename Tool Export Action
 ```
 
-Lightroom 导出完成后会把本次导出的文件交给 `SDJI Rename Tool.app`，工具只处理这些文件，不会扫描整个导出目录。
+Lightroom 导出完成后会把本次导出的文件交给 `SDJI Rename Tool.app`，工具只处理这些文件，不会扫描整个导出目录。改名完成后会短暂等待并自动打开导出文件夹，适合 Lightroom CC 不能叠加多个后处理动作的场景。
 
-安装/更新 Export Action：
+推荐在 App 左侧 `Lightroom CC Export Action` 区域点击 `安装` 或 `更新`。如果 Lightroom 使用了特殊位置，点击 `选择 App/目录`，可以选择 `Lightroom CC.app` 本体，也可以选择 Export Actions 文件夹后再安装；选择 `.app` 时会自动写入它内部的 Export Actions 目录。
+
+也可以用脚本安装/更新：
 
 ```bash
 scripts/install_lightroom_export_action.sh "/Applications/SDJI Rename Tool.app/Contents/MacOS/SDJI Rename Tool"

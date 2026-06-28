@@ -6,9 +6,12 @@ final class AppModel: ObservableObject {
     @Published var rules = RenameRules()
     @Published var plan: [RenameItem] = []
     @Published var status = "未选择文件夹"
+    @Published var exportActionTarget = ExportActionInstaller.selectedTarget
+    @Published var exportActionStatus = "未安装"
 
     init() {
         loadConfig()
+        refreshExportActionStatus()
     }
 
     func setFolder(_ url: URL) {
@@ -68,6 +71,33 @@ final class AppModel: ObservableObject {
         } catch {
             status = "保存失败: \(error.localizedDescription)"
         }
+    }
+
+    func installExportAction() {
+        do {
+            try ExportActionInstaller.install(to: exportActionTarget)
+            refreshExportActionStatus()
+            status = "Lightroom Export Action 已安装"
+        } catch {
+            refreshExportActionStatus()
+            status = "安装失败: \(error.localizedDescription)"
+        }
+    }
+
+    func setExportActionTarget(_ url: URL) {
+        exportActionTarget = ExportActionInstaller.target(for: url)
+        ExportActionInstaller.setCustomTarget(url)
+        refreshExportActionStatus()
+    }
+
+    func resetExportActionTarget() {
+        ExportActionInstaller.resetTarget()
+        exportActionTarget = ExportActionInstaller.selectedTarget
+        refreshExportActionStatus()
+    }
+
+    func refreshExportActionStatus() {
+        exportActionStatus = ExportActionInstaller.statusText(for: exportActionTarget)
     }
 
     private func loadConfig() {

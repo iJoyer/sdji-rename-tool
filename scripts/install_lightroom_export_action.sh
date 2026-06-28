@@ -32,11 +32,22 @@ trap 'rm -f "$TMP_SCRIPT"' EXIT
 cat > "$TMP_SCRIPT" <<APPLESCRIPT
 on open exportedFiles
     set fileArgs to ""
+    set exportFolders to {}
     repeat with exportedFile in exportedFiles
-        set fileArgs to fileArgs & " " & quoted form of POSIX path of exportedFile
+        set exportedPath to POSIX path of exportedFile
+        set fileArgs to fileArgs & " " & quoted form of exportedPath
+        set exportFolder to do shell script "/usr/bin/dirname " & quoted form of exportedPath
+        if exportFolders does not contain exportFolder then
+            set end of exportFolders to exportFolder
+        end if
     end repeat
 
     do shell script quoted form of "$APP_EXECUTABLE" & " --lightroom-export" & fileArgs
+    delay 0.3
+
+    repeat with exportFolder in exportFolders
+        do shell script "/usr/bin/open " & quoted form of (exportFolder as text)
+    end repeat
 end open
 
 on run
@@ -45,5 +56,7 @@ end run
 APPLESCRIPT
 
 osacompile -o "$EXPORT_ACTIONS_DIR/$ACTION_NAME.app" "$TMP_SCRIPT"
+mkdir -p "$EXPORT_ACTIONS_DIR/$ACTION_NAME.app/Contents/Resources"
+printf "%s" "$APP_EXECUTABLE" > "$EXPORT_ACTIONS_DIR/$ACTION_NAME.app/Contents/Resources/sdji-export-action-target.txt"
 
 echo "Installed: $EXPORT_ACTIONS_DIR/$ACTION_NAME.app"

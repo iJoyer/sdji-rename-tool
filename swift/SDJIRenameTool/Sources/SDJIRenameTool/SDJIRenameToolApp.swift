@@ -111,6 +111,8 @@ struct Sidebar: View {
                     }
                 }
 
+                LightroomActionSection(model: model)
+
                 SectionBox("Scan") {
                     VStack(alignment: .leading, spacing: 10) {
                         FieldLabel("文件格式")
@@ -178,6 +180,67 @@ struct Sidebar: View {
         panel.allowsMultipleSelection = false
         if panel.runModal() == .OK, let url = panel.url {
             model.setFolder(url)
+        }
+    }
+}
+
+struct LightroomActionSection: View {
+    @ObservedObject var model: AppModel
+
+    var body: some View {
+        SectionBox("Lightroom CC Export Action") {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text(model.exportActionStatus)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(statusColor)
+                    Spacer()
+                    Circle()
+                        .fill(statusColor)
+                        .frame(width: 8, height: 8)
+                }
+
+                Text(model.exportActionTarget.label)
+                    .font(.system(size: 12))
+                    .foregroundStyle(AppColor.muted)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                HStack(spacing: 8) {
+                    Button(model.exportActionStatus == "已安装" ? "更新" : "安装") {
+                        model.installExportAction()
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+
+                    Button("选择 App/目录") {
+                        chooseExportActionTarget()
+                    }
+                    .buttonStyle(SecondaryButtonStyle())
+
+                    Button("默认") {
+                        model.resetExportActionTarget()
+                    }
+                    .buttonStyle(SecondaryButtonStyle())
+                }
+            }
+        }
+    }
+
+    private var statusColor: Color {
+        model.exportActionStatus == "已安装" ? AppColor.success : AppColor.muted
+    }
+
+    private func chooseExportActionTarget() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.treatsFilePackagesAsDirectories = false
+        panel.prompt = "选择"
+        panel.message = "选择 Lightroom CC.app，或选择 Export Actions 文件夹"
+        if panel.runModal() == .OK, let url = panel.url {
+            model.setExportActionTarget(url)
         }
     }
 }
@@ -360,6 +423,8 @@ struct SectionBox<Content: View>: View {
                 .font(.custom("Oxanium", size: 12).weight(.semibold))
                 .foregroundStyle(AppColor.muted)
                 .textCase(.uppercase)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
             content
         }
         .padding(12)
