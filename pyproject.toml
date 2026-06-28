@@ -25,11 +25,22 @@ classifiers = [
 ]
 dependencies = []
 
+[project.optional-dependencies]
+gui = ["PySide6>=6.7"]
+build = ["pyinstaller>=6.8"]
+
 [project.scripts]
 pic-rename = "pic_rename_tool.cli:main"
+pic-rename-gui = "pic_rename_tool.gui:main"
 
 [tool.setuptools.packages.find]
 include = ["pic_rename_tool*"]
 
 [tool.setuptools.package-data]
-pic_rename_tool = ["default_config.yaml"]
+pic_rename_tool = [
+  "default_config.yaml",
+  "assets/fonts/Oxanium/*.ttf",
+  "assets/fonts/Oxanium/OFL.txt",
+  "assets/icons/*.svg",
+  "assets/icons/*.icns",
+]

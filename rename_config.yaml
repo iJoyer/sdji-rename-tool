@@ -1,5 +1,10 @@
 # 文件重命名规则配置（此文件本身不会执行重命名）
 # 参数名使用英文，注释使用中文。
+# 改名流程（按顺序）：
+# 1) 删除 DJI 后面的时间戳（命中时）
+# 2) 清理下划线标记（例如 _D）
+# 3) 清理连字符编辑链（例如 -EDIT/-NR），并保留 keep_markers（例如 -T）
+# 4) 目标名冲突时自动追加 -2/-3...
 
 scope:
   # 是否递归处理子目录
@@ -32,16 +37,19 @@ file_types:
 dji_rules:
   # 是否启用 DJI 文件名规则
   enabled: true
-  # 仅匹配此前缀开头的文件
+  # 匹配文件名中包含此前缀标记（如 DJI_）的文件
   starts_with: "DJI"
   # 说明：
-  # - 时间戳删除仅对 starts_with 命中的文件生效（例如 DJI）
+  # - 时间戳删除仅对包含 starts_with_ 的文件生效（如 ...DJI_2025...）
   # - 词表清理（remove_markers/keep_markers）对所有匹配图片文件生效
+  # - 示例：
+  #   1121-DJI_20241121065320_0007_D-Enhanced-NR-EDIT-T.JPG
+  #   -> 1121-DJI_0007-T.JPG
 
   # 删除中间日期/时间戳，例如：
   # DJI_20250917051539_0240_D_Pre.JPG -> DJI_0240_D_Pre.JPG
   remove_middle_timestamp: true
-  # 仅匹配 DJI 文件头后紧跟的时间戳段（更安全，避免误删其他数字）
+  # 仅删除 DJI_ 后紧跟的时间戳段（8位或14位）
   timestamp_must_follow_prefix: true
   timestamp_patterns:
     - "yyyyMMdd"        # 8位
@@ -82,5 +90,9 @@ execution:
   dry_run: false
   # 是否输出改名日志
   create_rename_log: yes
+  # 提示：--undo-last 默认会读取这个日志文件
   # 改名日志文件名（建议放 /tmp，方便 undo-last 在不同目录执行）
   rename_log_file: "/tmp/pic-rename/rename_log.csv"
+  # 可配合命令：
+  # - pic-rename --undo-last
+  # - pic-rename --undo-last --clear-log

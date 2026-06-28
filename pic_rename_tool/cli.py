@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+from dataclasses import dataclass
 from importlib.abc import Traversable
 import importlib.resources as pkg_resources
 import os
@@ -14,6 +15,12 @@ from pic_rename_tool import __version__
 
 
 APP_NAME = "pic-rename"
+
+
+@dataclass(frozen=True)
+class RenamePlanItem:
+    source: Path
+    target: Path
 
 
 def _strip_comment(line: str) -> str:
@@ -222,10 +229,12 @@ def tail_has_removable_underscore_marker(stem: str, remove_markers: set[str]) ->
     if "_" not in stem:
         return False
     tail = stem.rsplit("_", 1)[1]
-    if "-" not in tail:
-        return False
-    head = tail.split("-", 1)[0]
-    return f"_{head}" in remove_markers
+    if f"_{tail}" in remove_markers:
+        return True
+    if "-" in tail:
+        head = tail.split("-", 1)[0]
+        return f"_{head}" in remove_markers
+    return False
 
 
 def strip_hyphen_chain(base: str, keep_markers: set[str], remove_markers: set[str]) -> str:
@@ -265,7 +274,11 @@ def strip_hyphen_chain(base: str, keep_markers: set[str], remove_markers: set[st
     return f"{core}-{'-'.join(kept_tokens)}"
 
 
-def remove_underscore_markers(base: str, remove_markers: set[str]) -> str:
+def remove_underscore_markers(
+    base: str,
+    keep_markers: set[str],
+    remove_markers: set[str],
+) -> str:
     if "_" not in base:
         return base
     parts = base.split("_")
@@ -281,8 +294,9 @@ def remove_underscore_markers(base: str, remove_markers: set[str]) -> str:
         if "-" in token:
             head, rest = token.split("-", 1)
             if f"_{head}" in remove_markers:
-                if rest:
-                    kept[-1] = f"{kept[-1]}-{rest}"
+                kept_rest = [part for part in rest.split("-") if f"-{part}" in keep_markers]
+                if kept_rest:
+                    kept[-1] = f"{kept[-1]}-{'-'.join(kept_rest)}"
                 continue
 
         kept.append(token)
@@ -309,7 +323,7 @@ def normalize_name(stem: str, rules: dict[str, Any]) -> str:
     suffix = ""
     if not tail_has_removable_underscore_marker(stem, remove_markers):
         stem, suffix = split_tail_suffix(stem)
-    updated = remove_underscore_markers(stem, remove_markers)
+    updated = remove_underscore_markers(stem, keep_markers, remove_markers)
     if updated != stem:
         changed = True
         stem = updated
@@ -319,7 +333,7 @@ def normalize_name(stem: str, rules: dict[str, Any]) -> str:
         changed = True
         stem = updated
 
-    updated = remove_underscore_markers(stem, remove_markers)
+    updated = remove_underscore_markers(stem, keep_markers, remove_markers)
     if updated != stem:
         changed = True
         stem = updated
@@ -341,17 +355,24 @@ def resolve_conflict(
     strategy: str,
     source_serial_stem: str,
     start_index: int,
-) -> Path:
+) -> Path | None:
     if target == src:
         return target
     if target not in taken and not target.exists():
         return target
-    if strategy != "append_dash_index":
+    if strategy == "skip":
+        return None
+    if strategy not in {"append_dash_index", "append_parentheses_index", "append_underscore_index"}:
         raise ValueError(f"Unsupported conflict strategy: {strategy}")
 
     idx = max(2, start_index)
     while True:
-        candidate_name = f"{source_serial_stem}-{idx}{target.suffix}"
+        if strategy == "append_parentheses_index":
+            candidate_name = f"{source_serial_stem} ({idx}){target.suffix}"
+        elif strategy == "append_underscore_index":
+            candidate_name = f"{source_serial_stem}_{idx}{target.suffix}"
+        else:
+            candidate_name = f"{source_serial_stem}-{idx}{target.suffix}"
         candidate = target.with_name(candidate_name)
         if candidate not in taken and not candidate.exists():
             return candidate
@@ -366,45 +387,26 @@ def load_effective_config(config_path: Path | None) -> dict[str, Any]:
     return load_simple_yaml(config_path)
 
 
-def run(
-    base_dir: Path,
-    config_path: Path | None,
-    dry_run_override: bool | None = None,
-    auto_confirm: bool = False,
-) -> int:
-    try:
-        config = load_effective_config(config_path)
-    except FileNotFoundError as e:
-        print(str(e))
-        return 1
-
+def build_rename_plan(base_dir: Path, config: dict[str, Any]) -> list[RenamePlanItem]:
     scope = config.get("scope", {})
     file_types = config.get("file_types", {})
     dji_rules = config.get("dji_rules", {})
     conflict = config.get("conflict_resolution", {})
-    execution = config.get("execution", {})
 
     recursive = bool(scope.get("recursive", True))
     exts = {str(e).lower() for e in file_types.get("image_extensions", [])}
-    dry_run = bool(execution.get("dry_run", True))
-    if dry_run_override is not None:
-        dry_run = dry_run_override
-    log_enabled = bool(execution.get("create_rename_log", True))
-    log_name = str(execution.get("rename_log_file", "rename_log.csv"))
     conflict_strategy = str(conflict.get("strategy", "append_dash_index"))
     conflict_start_index = int(conflict.get("start_index", 2))
     dji_enabled = bool(dji_rules.get("enabled", True))
 
     if not exts:
-        print("未配置 image_extensions，已退出。")
-        return 0
+        return []
 
     files = list_image_files(base_dir, recursive=recursive, exts=exts)
     if not files:
-        print("未找到可处理的图片文件。")
-        return 0
+        return []
 
-    plan: list[tuple[Path, Path]] = []
+    plan: list[RenamePlanItem] = []
     taken_targets: set[Path] = set()
 
     for src in files:
@@ -428,19 +430,66 @@ def run(
             source_serial_stem=new_stem,
             start_index=conflict_start_index,
         )
+        if target is None:
+            continue
         taken_targets.add(target)
 
         if target != src:
-            plan.append((src, target))
+            plan.append(RenamePlanItem(source=src, target=target))
+
+    return plan
+
+
+def write_rename_log(base_dir: Path, log_path: Path, plan: list[RenamePlanItem]) -> None:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["base_dir", "source", "target"])
+        for item in plan:
+            writer.writerow(
+                [
+                    str(base_dir),
+                    str(item.source.relative_to(base_dir)),
+                    str(item.target.relative_to(base_dir)),
+                ]
+            )
+
+
+def apply_rename_plan(plan: list[RenamePlanItem]) -> None:
+    for item in plan:
+        item.target.parent.mkdir(parents=True, exist_ok=True)
+        item.source.rename(item.target)
+
+
+def run(
+    base_dir: Path,
+    config_path: Path | None,
+    dry_run_override: bool | None = None,
+    auto_confirm: bool = False,
+) -> int:
+    try:
+        config = load_effective_config(config_path)
+    except FileNotFoundError as e:
+        print(str(e))
+        return 1
+
+    execution = config.get("execution", {})
+    dry_run = bool(execution.get("dry_run", True))
+    if dry_run_override is not None:
+        dry_run = dry_run_override
+    log_enabled = bool(execution.get("create_rename_log", True))
+    log_name = str(execution.get("rename_log_file", "rename_log.csv"))
+
+    plan = build_rename_plan(base_dir=base_dir, config=config)
 
     if not plan:
         print("没有需要改名的文件。")
         return 0
 
     print(f"待处理: {len(plan)}")
-    for src, dst in plan:
-        rel_src = src.relative_to(base_dir)
-        rel_dst = dst.relative_to(base_dir)
+    for item in plan:
+        rel_src = item.source.relative_to(base_dir)
+        rel_dst = item.target.relative_to(base_dir)
         print(f"{rel_src} -> {rel_dst}")
 
     if not dry_run and not auto_confirm:
@@ -450,23 +499,14 @@ def run(
 
     if log_enabled:
         log_path = (base_dir / log_name).resolve()
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        with log_path.open("w", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow(["base_dir", "source", "target"])
-            for src, dst in plan:
-                writer.writerow(
-                    [str(base_dir), str(src.relative_to(base_dir)), str(dst.relative_to(base_dir))]
-                )
+        write_rename_log(base_dir=base_dir, log_path=log_path, plan=plan)
         print(f"日志已写入: {log_path}")
 
     if dry_run:
         print("dry_run=true，未执行实际改名。")
         return 0
 
-    for src, dst in plan:
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        src.rename(dst)
+    apply_rename_plan(plan)
     print("改名完成。")
     return 0
 

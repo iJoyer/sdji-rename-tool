@@ -1,78 +1,86 @@
-# Rename Tool
+# SDJI Rename Tool
 
-用于按配置批量规范化图片文件名的 CLI（可发布到 PyPI）。
+一个给 DJI 图片文件批量改名的 macOS 小工具。
 
-## Install
+做这个工具的初衷很简单：DJI 的文件名太太太长了，而且经常混着时间戳、`_D`、`-HDR`、`-T` 这类标记。Finder 里没有一个舒服的机械替换方式，手动改又很烦，所以做了这么个拖进去、先预览、再改名的小工具。
 
-Python 用户：
+![SDJI Rename Tool](screenshots/app.png)
 
-```bash
-pipx install pic-rename-tool
+它是原生 macOS App，体积很小，不需要 Python 或额外运行环境。
+
+## 功能
+
+- 拖入图片文件夹
+- 预览 `原文件名 -> 新文件名`
+- 自定义图片格式
+- 清理 DJI 文件名里的时间戳
+- 删除 `_D`、`-D`、`-HDR`、`-EDIT` 等标记
+- 可配置保留标记，比如 `-T`、`-L`
+- 重复文件名处理：
+  - `name-2.jpg`
+  - `name (2).jpg`
+  - `name_2.jpg`
+  - 跳过冲突文件
+- 应用改名
+- 撤销上次改名
+- 保存规则配置
+
+## 默认规则示例
+
+```text
+DJI_20240123142524_0486_D.JPG
+-> DJI_0486.JPG
+
+0730-DJI_20240730173246_0047_D-T.JPG
+-> 0730-DJI_0047-T.JPG
 ```
 
-或：
+如果把 `-T` 从保留标记中移除：
 
-```bash
-pip install pic-rename-tool
+```text
+0730-DJI_20240730173246_0047_D-T.JPG
+-> 0730-DJI_0047.JPG
 ```
 
-npm/pnpm 用户（需本机有 Python 3.9+）：
+## 安装
 
-```bash
-npm install -g pic-rename-tool
+下载：
+
+```text
+SDJI-Rename-Tool-mac-arm64.zip
 ```
 
-或：
+解压后把 `SDJI Rename Tool.app` 拖到 `Applications` 即可。
+
+如果 macOS 首次打开提示安全限制，可以在 Finder 中右键 App，选择“打开”。
+
+## 开发构建
+
+需要 Xcode 或 Xcode Command Line Tools。
+
+构建：
 
 ```bash
-pnpm add -g pic-rename-tool
+./build_app.sh
 ```
 
-## Usage
+产物：
 
-```bash
-pic-rename
+```text
+dist/SDJI Rename Tool.app
+dist/SDJI-Rename-Tool-mac-arm64.zip
 ```
 
-配置优先级：
+## 项目结构
 
-1. `--config <path>`（最高）
-2. 用户配置：`~/.config/pic-rename/config.yaml`（Windows 为 `%APPDATA%\pic-rename\config.yaml`）
-3. 包内默认配置（兜底）
-
-默认日志位置：`/tmp/pic-rename/rename_log.csv`
-
-初始化用户配置：
-
-```bash
-pic-rename --init-config
+```text
+Package.swift
+Sources/SDJIRenameTool/
+build_app.sh
+screenshots/app.png
+SDJI-Rename-Tool-mac-arm64.zip
 ```
 
-常用参数：
+## License
 
-```bash
-pic-rename --path ./photos --config rename_config.yaml --dry-run
-```
-
-改名恢复（按日志回滚）：
-
-```bash
-pic-rename --path ./photos --undo-last --clear-log
-```
-
-- `--path`: 要处理的目录（默认当前目录）
-- `--config`: 外部配置文件路径（相对路径默认基于 `--path`）
-- `--init-config`: 写入用户配置
-- `--force`: 配合 `--init-config` 覆盖已有配置
-- `--undo-last`: 根据日志恢复上次改名
-- `--log-file`: 指定恢复日志文件
-- `--clear-log`: 清空日志（可配合 `--undo-last`）
-- `--yes`: 跳过改名前确认
-- `--dry-run`: 强制预览，不实际改名
-
-## Gitea 推送示例
-
-```bash
-git remote add origin ssh://git@10.90.1.9:2222/<owner>/<repo>.git
-git push -u origin main
-```
+MIT
