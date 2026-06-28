@@ -55,6 +55,18 @@ enum RenameEngine {
             .filter { allowed.contains($0.pathExtension.lowercased()) }
             .sorted { $0.path < $1.path }
 
+        return try buildPlan(files: files, rules: rules)
+    }
+
+    static func buildPlan(files inputFiles: [URL], rules: RenameRules) throws -> [RenameItem] {
+        let allowed = Set(rules.extensions.map { $0.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: ".")) })
+        guard !allowed.isEmpty else { return [] }
+
+        let files = inputFiles
+            .filter { isRegularFile($0) }
+            .filter { allowed.contains($0.pathExtension.lowercased()) }
+            .sorted { $0.path < $1.path }
+
         var taken = Set<String>()
         var plan: [RenameItem] = []
         let strategy = ConflictStrategy(rawValue: rules.conflictStrategy) ?? .appendDash

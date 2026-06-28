@@ -7,7 +7,10 @@ from dataclasses import dataclass
 from importlib.abc import Traversable
 import importlib.resources as pkg_resources
 import os
+import platform
 import re
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +18,7 @@ from pic_rename_tool import __version__
 
 
 APP_NAME = "pic-rename"
+MAC_APP_NAME = "SDJI Rename Tool"
 
 
 @dataclass(frozen=True)
@@ -181,6 +185,101 @@ def init_user_config(path: Path, force: bool = False) -> int:
     path.write_text(get_builtin_config_resource().read_text(encoding="utf-8"), encoding="utf-8")
     print(f"已写入用户配置: {path}")
     return 0
+
+
+def find_macos_app_executable() -> Path | None:
+    if platform.system() != "Darwin":
+        return None
+
+    env_path = os.getenv("SDJI_RENAME_TOOL_APP")
+    candidates: list[Path] = []
+    if env_path:
+        candidates.append(Path(env_path))
+
+    candidates.extend(
+        [
+            Path("/Applications") / f"{MAC_APP_NAME}.app" / "Contents" / "MacOS" / MAC_APP_NAME,
+            Path.home() / "Applications" / f"{MAC_APP_NAME}.app" / "Contents" / "MacOS" / MAC_APP_NAME,
+            Path(__file__).resolve().parents[1]
+            / "dist-swift"
+            / f"{MAC_APP_NAME}.app"
+            / "Contents"
+            / "MacOS"
+            / MAC_APP_NAME,
+        ]
+    )
+
+    for candidate in candidates:
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return candidate
+    return None
+
+
+def translate_args_for_macos_app(argv: list[str]) -> list[str] | None:
+    unsupported_legacy_flags = {
+        "--config",
+        "-c",
+        "--init-config",
+        "--force",
+        "--log-file",
+        "--clear-log",
+    }
+    if any(arg in unsupported_legacy_flags for arg in argv):
+        return None
+
+    if not argv:
+        return ["--rename-folder", "."]
+
+    if argv[0] in {
+        "--rename-folder",
+        "--lightroom-export",
+        "--undo-last",
+        "--dry-run",
+        "--config-path",
+        "--help",
+        "-h",
+        "--version",
+        "-V",
+    }:
+        return argv
+
+    if "--undo-last" in argv:
+        translated = ["--undo-last"]
+        if "--dry-run" in argv:
+            translated.append("--dry-run")
+        return translated
+
+    path = "."
+    dry_run = "--dry-run" in argv
+    idx = 0
+    while idx < len(argv):
+        arg = argv[idx]
+        if arg in {"--path", "-p"} and idx + 1 < len(argv):
+            path = argv[idx + 1]
+            idx += 2
+            continue
+        idx += 1
+
+    translated = ["--rename-folder", path]
+    if dry_run:
+        translated.append("--dry-run")
+    return translated
+
+
+def delegate_to_macos_app(argv: list[str]) -> int | None:
+    if os.getenv("SDJI_RENAME_TOOL_LEGACY") == "1":
+        return None
+
+    app_executable = find_macos_app_executable()
+    if app_executable is None:
+        return None
+
+    translated = translate_args_for_macos_app(argv)
+    if translated is None:
+        return None
+
+    result = subprocess.run([str(app_executable), *translated], check=False)
+    return result.returncode
 
 
 def list_image_files(base_dir: Path, recursive: bool, exts: set[str]) -> list[Path]:
@@ -658,6 +757,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> None:
+    if argv is None:
+        argv = sys.argv[1:]
+
+    delegated_status = delegate_to_macos_app(argv)
+    if delegated_status is not None:
+        raise SystemExit(delegated_status)
+
     parser = build_parser()
     args = parser.parse_args(argv)
 

@@ -7,11 +7,6 @@ final class AppModel: ObservableObject {
     @Published var plan: [RenameItem] = []
     @Published var status = "未选择文件夹"
 
-    private let configURL: URL = {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        return base.appendingPathComponent("SDJI Rename Tool").appendingPathComponent("config.json")
-    }()
-
     init() {
         loadConfig()
     }
@@ -68,11 +63,7 @@ final class AppModel: ObservableObject {
 
     func saveConfig() {
         do {
-            try FileManager.default.createDirectory(
-                at: configURL.deletingLastPathComponent(),
-                withIntermediateDirectories: true
-            )
-            try JSONEncoder().encode(rules).write(to: configURL)
+            try ConfigStore.saveRules(rules)
             status = "配置已保存"
         } catch {
             status = "保存失败: \(error.localizedDescription)"
@@ -80,10 +71,6 @@ final class AppModel: ObservableObject {
     }
 
     private func loadConfig() {
-        guard let data = try? Data(contentsOf: configURL),
-              let saved = try? JSONDecoder().decode(RenameRules.self, from: data) else {
-            return
-        }
-        rules = saved
+        rules = ConfigStore.loadRules()
     }
 }

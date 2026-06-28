@@ -4,6 +4,7 @@ import AppKit
 @main
 struct SDJIRenameToolApp: App {
     init() {
+        AppCommandLine.runIfRequested()
         FontLoader.load()
     }
 

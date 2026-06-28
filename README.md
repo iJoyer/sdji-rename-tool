@@ -1,16 +1,24 @@
 # SDJI Rename Tool
 
-一个给 DJI 图片文件批量改名的 macOS 小工具。
+一个给 DJI 图片文件批量改名的 macOS 小工具，支持独立 App、命令行和 Adobe Lightroom Classic 导出后自动改名。
 
-做这个工具的初衷很简单：DJI 的文件名太太太长了，而且经常混着时间戳、`_D`、`-HDR`、`-T` 这类标记。Finder 里没有一个舒服的机械替换方式，手动改又很烦，所以做了这么个拖进去、先预览、再改名的小工具。
+做这个工具的初衷很简单：DJI 的文件名太太太长了，而且经常混着时间戳、`_D`、`-HDR`、`-T` 这类标记。Finder 里没有一个舒服的机械替换方式，Lightroom 导出后手动改也很烦，所以做了这么个工具。
 
 ![SDJI Rename Tool](screenshots/app.png)
 
-它是原生 macOS App，体积很小，不需要 Python 或额外运行环境。
+![Lightroom Export Action](screenshots/lightroom-export-action.png)
+
+它是原生 macOS App，体积很小，不需要 Python 或额外运行环境。配置只保存一份：
+
+```text
+~/Library/Application Support/SDJI Rename Tool/config.json
+```
 
 ## 功能
 
 - 拖入图片文件夹
+- Lightroom Classic 导出后自动改名
+- 命令行调用同一套 App 规则
 - 预览 `原文件名 -> 新文件名`
 - 自定义图片格式
 - 清理 DJI 文件名里的时间戳
@@ -24,6 +32,46 @@
 - 应用改名
 - 撤销上次改名
 - 保存规则配置
+
+## Lightroom Classic
+
+安装 Export Action 后，在 Lightroom Classic 导出窗口底部选择：
+
+```text
+Post-Processing -> After Export -> SDJI Rename Tool Export Action
+```
+
+Lightroom 导出完成后会把本次导出的文件交给 `SDJI Rename Tool.app`，工具只处理这些文件，不会扫描整个导出目录。
+
+安装/更新 Export Action：
+
+```bash
+scripts/install_lightroom_export_action.sh "/Applications/SDJI Rename Tool.app/Contents/MacOS/SDJI Rename Tool"
+```
+
+Export Action 会安装到：
+
+```text
+~/Library/Application Support/Adobe/Lightroom/Export Actions/
+```
+
+## 命令行
+
+命令行入口保留，但实际执行会转发到 `SDJI Rename Tool.app`，和 GUI、Lightroom 使用同一份配置。
+
+```bash
+pic-rename --path /path/to/images --dry-run
+pic-rename --path /path/to/images
+pic-rename --undo-last
+pic-rename --config-path
+```
+
+App 也可以直接调用：
+
+```bash
+"/Applications/SDJI Rename Tool.app/Contents/MacOS/SDJI Rename Tool" --rename-folder /path/to/images
+"/Applications/SDJI Rename Tool.app/Contents/MacOS/SDJI Rename Tool" --lightroom-export file1.jpg file2.jpg
+```
 
 ## 默认规则示例
 
@@ -61,24 +109,26 @@ SDJI-Rename-Tool-mac-arm64.zip
 构建：
 
 ```bash
+cd swift/SDJIRenameTool
 ./build_app.sh
 ```
 
 产物：
 
 ```text
-dist/SDJI Rename Tool.app
-dist/SDJI-Rename-Tool-mac-arm64.zip
+dist-swift/SDJI Rename Tool.app
+dist-swift/SDJI Rename Tool-swift-mac-arm64.zip
 ```
 
 ## 项目结构
 
 ```text
-Package.swift
-Sources/SDJIRenameTool/
-build_app.sh
+swift/SDJIRenameTool/Package.swift
+swift/SDJIRenameTool/Sources/SDJIRenameTool/
+swift/SDJIRenameTool/build_app.sh
+scripts/install_lightroom_export_action.sh
 screenshots/app.png
-SDJI-Rename-Tool-mac-arm64.zip
+screenshots/lightroom-export-action.png
 ```
 
 ## License
