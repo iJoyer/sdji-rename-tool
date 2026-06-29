@@ -217,8 +217,12 @@ enum RenameEngine {
     private static func tailHasRemovableUnderscoreMarker(_ stem: String, remove: Set<String>) -> Bool {
         guard let tail = stem.split(separator: "_").last else { return false }
         if remove.contains("_\(tail)") { return true }
-        if let head = tail.split(separator: "-").first {
-            return remove.contains("_\(head)")
+        let parts = tail.split(separator: "-", omittingEmptySubsequences: false).map(String.init)
+        if let head = parts.first, remove.contains("_\(head)") {
+            return true
+        }
+        if parts.count > 1 {
+            return parts.dropFirst().contains { remove.contains("-\($0)") }
         }
         return false
     }

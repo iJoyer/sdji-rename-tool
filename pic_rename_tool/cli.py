@@ -331,8 +331,11 @@ def tail_has_removable_underscore_marker(stem: str, remove_markers: set[str]) ->
     if f"_{tail}" in remove_markers:
         return True
     if "-" in tail:
-        head = tail.split("-", 1)[0]
-        return f"_{head}" in remove_markers
+        parts = tail.split("-")
+        head = parts[0]
+        if f"_{head}" in remove_markers:
+            return True
+        return any(f"-{part}" in remove_markers for part in parts[1:])
     return False
 
 
