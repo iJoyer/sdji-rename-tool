@@ -18,7 +18,7 @@ enum ConflictStrategy: String, CaseIterable, Identifiable {
     }
 }
 
-struct RenameRules: Codable {
+struct RenameRules: Codable, Equatable {
     var recursive = true
     var extensions = ["jpg", "jpeg", "png", "webp", "avif", "heic", "heif", "tif", "tiff", "raw", "dng", "cr2", "cr3", "nef", "arw", "raf", "orf", "rw2"]
     var djiEnabled = true

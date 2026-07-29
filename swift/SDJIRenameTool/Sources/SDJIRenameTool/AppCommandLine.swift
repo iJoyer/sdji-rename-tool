@@ -46,7 +46,7 @@ enum AppCommandLine {
             return 0
 
         case "--version", "-V":
-            print("SDJI Rename Tool 0.1.0")
+            print("SDJI Rename Tool 1.0")
             return 0
 
         case "--help", "-h":

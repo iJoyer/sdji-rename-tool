@@ -8,6 +8,7 @@ BUNDLE_ID="cn.ijoyer.sdjirename.swift"
 BUILD_DIR=".build/arm64-apple-macosx/release"
 DIST_DIR="../../dist-swift"
 APP_DIR="$DIST_DIR/$APP_NAME.app"
+ICON_PARTIAL_PLIST=".build/AppIcon-Info.plist"
 
 DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}" swift build -c release
 
@@ -16,7 +17,22 @@ mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources/Fonts"
 
 cp "$BUILD_DIR/$APP_NAME" "$APP_DIR/Contents/MacOS/$APP_NAME"
 cp "Sources/SDJIRenameTool/Resources/AppIcon.icns" "$APP_DIR/Contents/Resources/AppIcon.icns"
+cp "Sources/SDJIRenameTool/Resources/AppIconLight.icns" "$APP_DIR/Contents/Resources/AppIconLight.icns"
+cp "Sources/SDJIRenameTool/Resources/AppIconDark.icns" "$APP_DIR/Contents/Resources/AppIconDark.icns"
 cp Sources/SDJIRenameTool/Resources/Fonts/*.ttf "$APP_DIR/Contents/Resources/Fonts/"
+
+DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}" xcrun actool \
+  "Sources/SDJIRenameTool/Resources/AppIcon.icon" \
+  --compile "$APP_DIR/Contents/Resources" \
+  --platform macosx \
+  --minimum-deployment-target 14.0 \
+  --app-icon AppIcon \
+  --standalone-icon-behavior all \
+  --output-partial-info-plist "$ICON_PARTIAL_PLIST" \
+  --output-format human-readable-text \
+  --warnings \
+  --errors \
+  --notices
 
 cat > "$APP_DIR/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -31,6 +47,8 @@ cat > "$APP_DIR/Contents/Info.plist" <<PLIST
   <string>$APP_NAME</string>
   <key>CFBundleIconFile</key>
   <string>AppIcon</string>
+  <key>CFBundleIconName</key>
+  <string>AppIcon</string>
   <key>CFBundleIdentifier</key>
   <string>$BUNDLE_ID</string>
   <key>CFBundleInfoDictionaryVersion</key>
@@ -40,7 +58,7 @@ cat > "$APP_DIR/Contents/Info.plist" <<PLIST
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>0.1.0</string>
+  <string>1.0</string>
   <key>CFBundleVersion</key>
   <string>1</string>
   <key>LSMinimumSystemVersion</key>
